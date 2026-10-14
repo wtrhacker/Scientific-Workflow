@@ -31,3 +31,11 @@ pub(crate) use parameters::ResolvedExecutionUnitParameters;
 pub(crate) use program::ResolvedProgramTask;
 pub(crate) use specification::{PhaseSpecification, ProjectSpecification, ResolvedTask};
 pub(crate) use store::{Config, ConfigSnapshot};
+
+/// Expand parameter selections using Workflow's existing deterministic grammar.
+///
+/// This effect-free entry point supports external script queues without requiring
+/// a study, recordings, or an analysis companion. Literal arrays stay literal.
+pub fn expand_parameters(value: &serde_json::Value) -> Result<Vec<serde_json::Value>, ConfigError> {
+    expansion::expand(std::path::Path::new("parameters"), value)
+}

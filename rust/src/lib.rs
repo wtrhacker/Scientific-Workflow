@@ -113,6 +113,8 @@ mod composition;
 mod error;
 
 pub mod config;
+#[cfg(feature = "external-tools")]
+pub mod external;
 pub mod observation;
 pub mod persistence;
 pub mod prelude;

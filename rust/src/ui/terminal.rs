@@ -28,7 +28,8 @@ static TERMINAL_OWNED: AtomicBool = AtomicBool::new(false);
 const SPINNER: &[char] = &['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
 const TIMING_WIDTH: u16 = 19;
 
-pub(super) fn interactive() -> bool {
+/// Whether standard input and standard error are interactive terminals.
+pub fn interactive() -> bool {
     io::stdin().is_terminal() && io::stderr().is_terminal()
 }
 
@@ -45,36 +46,7 @@ pub(super) struct DashboardTerminal {
 
 impl DashboardTerminal {
     pub(super) fn enter() -> io::Result<Self> {
-        TERMINAL_OWNED
-            .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
-            .map_err(|_| io::Error::other("another Workflow dashboard owns the terminal"))?;
-        let lease = TerminalLease;
-        if let Err(source) = enable_raw_mode() {
-            drop(lease);
-            return Err(source);
-        }
-        let mut stderr = io::stderr();
-        if let Err(source) = execute!(
-            stderr,
-            EnterAlternateScreen,
-            Clear(ClearType::All),
-            MoveTo(0, 0),
-            Hide,
-            EnableMouseCapture
-        ) {
-            restore_terminal();
-            drop(lease);
-            return Err(source);
-        }
-        let backend = CrosstermBackend::new(io::stderr());
-        let terminal = match Terminal::new(backend) {
-            Ok(terminal) => terminal,
-            Err(source) => {
-                restore_terminal();
-                drop(lease);
-                return Err(source);
-            }
-        };
+        let (terminal, lease) = open_surface()?;
         Ok(Self {
             terminal,
             command: CommandInput::default(),
@@ -210,17 +182,54 @@ fn page_offset(offset: usize, count: usize, capacity: usize) -> usize {
 impl Drop for DashboardTerminal {
     fn drop(&mut self) {
         let _ = self.terminal.show_cursor();
-        restore_terminal();
         let _ = &self.lease;
     }
 }
 
-struct TerminalLease;
+/// Exclusive ownership of a raw-mode alternate screen; drop restores the terminal.
+pub struct TerminalLease(());
 
 impl Drop for TerminalLease {
     fn drop(&mut self) {
+        restore_terminal();
         TERMINAL_OWNED.store(false, Ordering::Release);
     }
+}
+
+/// Open an exclusive Ratatui surface on standard error and its restoration lease.
+/// Keep the returned lease alive until the terminal surface is no longer used.
+pub fn open_surface() -> io::Result<(Terminal<CrosstermBackend<io::Stderr>>, TerminalLease)> {
+    TERMINAL_OWNED
+        .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
+        .map_err(|_| io::Error::other("another Workflow dashboard owns the terminal"))?;
+    let lease = TerminalLease(());
+    if let Err(source) = enable_raw_mode() {
+        drop(lease);
+        return Err(source);
+    }
+    let mut stderr = io::stderr();
+    if let Err(source) = execute!(
+        stderr,
+        EnterAlternateScreen,
+        Clear(ClearType::All),
+        MoveTo(0, 0),
+        Hide,
+        EnableMouseCapture
+    ) {
+        restore_terminal();
+        drop(lease);
+        return Err(source);
+    }
+    let backend = CrosstermBackend::new(io::stderr());
+    let terminal = match Terminal::new(backend) {
+        Ok(terminal) => terminal,
+        Err(source) => {
+            restore_terminal();
+            drop(lease);
+            return Err(source);
+        }
+    };
+    Ok((terminal, lease))
 }
 
 fn restore_terminal() {
@@ -376,13 +385,7 @@ fn progress_count(task: &TaskSnapshot) -> String {
 }
 
 fn task_row(task: &TaskSnapshot, tick: usize, now: Instant, progress_width: usize) -> Row<'static> {
-    let status_style = match task.status {
-        TaskStatus::Pending | TaskStatus::Skipped => Style::default().fg(Color::DarkGray),
-        TaskStatus::Running => Style::default().fg(Color::Blue),
-        TaskStatus::Completed => Style::default().fg(Color::Green),
-        TaskStatus::Failed => Style::default().fg(Color::Red),
-        TaskStatus::Cancelled => Style::default().fg(Color::Yellow),
-    };
+    let status_style = task_status_style(task.status);
     let progress = progress_text(task, tick, progress_width);
     let timing = timing_text(task, now);
     let task_label = if task.detail.is_empty() {
@@ -613,6 +616,17 @@ fn counts(snapshot: &DashboardSnapshot) -> Counts {
         failed,
         cancelled,
         skipped,
+    }
+}
+
+/// Return the shared color and emphasis for a task state.
+pub fn task_status_style(status: TaskStatus) -> Style {
+    match status {
+        TaskStatus::Pending | TaskStatus::Skipped => Style::default().fg(Color::DarkGray),
+        TaskStatus::Running => Style::default().fg(Color::Blue),
+        TaskStatus::Completed => Style::default().fg(Color::Green),
+        TaskStatus::Failed => Style::default().fg(Color::Red),
+        TaskStatus::Cancelled => Style::default().fg(Color::Yellow),
     }
 }
 

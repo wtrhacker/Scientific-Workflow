@@ -10,15 +10,25 @@ pub(super) enum UiCommand {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(super) enum EditAction {
+/// An edit to a terminal command line.
+pub enum EditAction {
+    /// Insert a Unicode character at the cursor.
     Insert(char),
+    /// Remove the preceding character.
     Backspace,
+    /// Remove the character at the cursor.
     Delete,
+    /// Move the cursor one character left.
     Left,
+    /// Move the cursor one character right.
     Right,
+    /// Move to the start of the line.
     Home,
+    /// Move to the end of the line.
     End,
+    /// Empty the line and reset the cursor.
     Clear,
+    /// Submit the current line and clear the editor.
     Submit,
 }
 
@@ -30,12 +40,24 @@ pub(super) enum CommandSubmission {
 }
 
 #[derive(Default)]
-pub(super) struct CommandInput {
+/// A Unicode-aware command-line editor with a character-position cursor.
+pub struct CommandInput {
     characters: Vec<char>,
     cursor: usize,
 }
 
 impl CommandInput {
+    /// Apply an edit without interpreting its contents as a Workflow command.
+    /// Read [`Self::text`] before clearing a line to implement a custom parser.
+    #[cfg(feature = "external-tools")]
+    pub fn edit_text(&mut self, action: EditAction) {
+        if action == EditAction::Submit {
+            self.clear();
+        } else {
+            let _ = self.edit(action);
+        }
+    }
+
     pub(super) fn edit(&mut self, action: EditAction) -> Option<CommandSubmission> {
         match action {
             EditAction::Insert(character) => {
@@ -64,15 +86,18 @@ impl CommandInput {
         None
     }
 
-    pub(super) fn text(&self) -> String {
+    /// Return the current contents.
+    pub fn text(&self) -> String {
         self.characters.iter().collect()
     }
 
-    pub(super) const fn cursor(&self) -> usize {
+    /// Return the cursor's zero-based character position.
+    pub const fn cursor(&self) -> usize {
         self.cursor
     }
 
-    pub(super) fn clear(&mut self) {
+    /// Empty the editor and reset its cursor.
+    pub fn clear(&mut self) {
         self.characters.clear();
         self.cursor = 0;
     }

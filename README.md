@@ -1,5 +1,8 @@
 # Scientific Workflow
 
+This fork also exposes optional [tools for external applications](EXTERNAL_TOOLS.md).
+The independently maintained `mps-manager` package is developed in a separate repository.
+
 **Focus on science itself.**
 
 Scientific computing can feel like spending 90% of your time fighting computer

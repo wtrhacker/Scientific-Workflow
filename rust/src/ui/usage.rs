@@ -9,14 +9,19 @@ const RESOURCE_REFRESH_INTERVAL: Duration = Duration::from_secs(1);
 const CPU_AVERAGE_WINDOW: Duration = Duration::from_secs(2);
 
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
-pub(super) struct UsageSnapshot {
-    pub(super) cpu_percent: Option<f64>,
-    pub(super) ram_percent: Option<f64>,
-    pub(super) disk_percent: Option<f64>,
+/// Best-effort host utilization, with unavailable measurements left empty.
+pub struct UsageSnapshot {
+    /// Recent average CPU utilization from zero to one hundred.
+    pub cpu_percent: Option<f64>,
+    /// Used physical-memory percentage.
+    pub ram_percent: Option<f64>,
+    /// Used space on the output filesystem.
+    pub disk_percent: Option<f64>,
 }
 
 #[derive(Default)]
-pub(super) struct UsageMonitor {
+/// A throttled host-resource sampler shared by terminal applications.
+pub struct UsageMonitor {
     cpu_history: VecDeque<(Instant, CpuCounters)>,
     last_sample: Option<Instant>,
     cached: UsageSnapshot,
@@ -29,7 +34,8 @@ struct CpuCounters {
 }
 
 impl UsageMonitor {
-    pub(super) fn sample(&mut self, output: Option<&Path>) -> UsageSnapshot {
+    /// Sample host usage and the filesystem containing `output`, or the current directory.
+    pub fn sample(&mut self, output: Option<&Path>) -> UsageSnapshot {
         self.sample_with(Instant::now(), || {
             (
                 read_cpu_counters(),

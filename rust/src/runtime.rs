@@ -14,6 +14,7 @@ mod event;
 mod execution;
 mod output;
 mod presentation;
+pub(crate) mod process;
 mod program;
 mod resources;
 mod reuse;

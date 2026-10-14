@@ -523,6 +523,13 @@ identities retain their existing derivation. Comparison stays inside each phase.
 
 ## Advanced API
 
+`config::expand_parameters(&serde_json::Value)` exposes the existing sweep grammar
+as an effect-free operation. It returns resolved JSON values in deterministic
+order without loading a study or producing output. External applications can
+map these values to their own script arguments; they keep responsibility for
+scheduling and replicates. See [external tools](../../../EXTERNAL_TOOLS.md) for
+the separately enabled process and terminal components.
+
 The module root exports only `ConfigError` to downstream crates. The same
 module is the named crate-visible peer boundary used by Study and Runtime;
 peer types are listed below so a Config replacement does not depend on type

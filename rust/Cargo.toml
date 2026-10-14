@@ -12,6 +12,7 @@ documentation = "https://docs.rs/scientific-workflow"
 keywords = ["science", "simulation", "workflow", "tensor", "state"]
 categories = ["science", "data-structures"]
 autobins = false
+
 include = [
     "src/*.rs",
     "src/**/*.rs",
@@ -21,6 +22,9 @@ include = [
     "README.md",
     "LICENSE",
 ]
+
+[features]
+external-tools = []
 
 [dependencies]
 crossterm = "0.29"

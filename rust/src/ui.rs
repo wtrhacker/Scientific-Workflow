@@ -4,11 +4,11 @@
 //! and lifecycle-fact contracts; crate composition attaches UI's inferred
 //! required interactive dashboard.
 
-mod command;
+pub(crate) mod command;
 mod live_log;
 mod session;
-mod state;
-mod terminal;
-mod usage;
+pub(crate) mod state;
+pub(crate) mod terminal;
+pub(crate) mod usage;
 
 pub(crate) use session::UiSession;

@@ -9,12 +9,19 @@ use crate::runtime::RuntimeEvent;
 const MESSAGE_HISTORY: usize = 100;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(super) enum TaskStatus {
+/// Common task states used by Workflow's terminal status palette.
+pub enum TaskStatus {
+    /// Waiting for admission.
     Pending,
+    /// Currently executing.
     Running,
+    /// Completed successfully.
     Completed,
+    /// Ended with a failure.
     Failed,
+    /// Cancelled explicitly.
     Cancelled,
+    /// Deliberately omitted.
     Skipped,
 }
 
