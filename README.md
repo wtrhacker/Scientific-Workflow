@@ -1,123 +1,41 @@
-# Scientific Workflow
+# Scientific Workflow: external tools fork
 
-This fork also exposes optional [tools for external applications](EXTERNAL_TOOLS.md).
-The independently maintained `mps-manager` package is developed in a separate repository.
+This is a fork of [Dingyi Sun's Scientific-Workflow](https://github.com/dingyisun0101/Scientific-Workflow).
+It exposes a few existing components for use by the separate
+[MPS Manager](https://github.com/wtrhacker/mps-manager) project.
 
-**Focus on science itself.**
+## What changed
 
-Scientific computing can feel like spending 90% of your time fighting computer
-systems: wiring programs together, implementing I/O, assembling Cartesian
-products of parameters, tracking runs, and getting results into visualization tools.
+- Added `config::expand_parameters` as a public entry point to the existing
+  parameter expander. Cartesian combinations, correlated cases, numeric ranges,
+  ordering, and validation use the original implementation.
+- Added the optional `external-tools` Rust feature, exposing the existing owned
+  process groups and terminal components through `scientific_workflow::external`.
+  Process cleanup can wait for an application's resource teardown, and explicit
+  pause/resume also handles signals sent outside the application.
+- Moved terminal restoration into the terminal lease, so an independently
+  packaged viewer restores the terminal when it closes.
 
-Scientific Workflow takes that infrastructure work off your hands. Once your
-scientific models and analysis components are integrated, define sweeps,
-replicates, dependencies, recording, and analysis pipelines in JSON—without
-writing custom orchestration code for each study.
+The existing Workflow runtime uses these same components. Its study grammar,
+scientific execution behavior, recordings, and Python companion are preserved.
 
-**Write your science. Let Workflow handle the experiment around it.**
+## What MPS Manager uses
 
-> **Breaking generation: Rust 0.16.0 / Python 0.6.0** supersedes Rust 0.15.x /
-> Python 0.5.x. Workflow now requires v2 task receipts with verified captured
-> inputs and produces NPY v3. No legacy-reuse adapter or compatibility alias
-> restores the older receipt contract. Scientific Rust APIs and raw recording
-> formats 7/8 remain supported. Read the [migration guide](docs/migration-0.16.0.md) before upgrading.
+MPS Manager uses the parameter expander, process-group ownership and cleanup,
+terminal lease, command editor, status colors, and host resource sampler.
+Its queue, NVIDIA MPS service handling, Python interface, and terminal browser
+live in the **separate MPS Manager repository**. It does not use Workflow's
+analysis pipeline or Python companion.
 
-Current patches are Rust **0.16.1** and Python **0.6.1**. The Rust patch accepts
-stable Python companions `>=0.6,<0.7` during conversion and reuse; the Python
-patch corrects documentation links. APIs, scientific behavior, and storage
-formats remain unchanged from the 0.16.0 / 0.6.0 breaking release.
+See [the extension notes](EXTERNAL_TOOLS.md) for the exported tools, and
+[the original upstream README](UPSTREAM_README.md) for ordinary Workflow usage.
 
+## Check the fork
 
-Rust **0.16.1** retains numeric sweeps, automatic task labels, durable captured
-inputs, lossless conversion, and preserved scalar shapes. Its dashboard has a
-centered uppercase title, a two-second CPU average, and one-second resource refresh.
-Historical NPY v2/v3 interpretation belongs to downstream analysis.
+```bash
+cargo test --locked -p scientific-workflow
+cargo test --locked -p scientific-workflow --features external-tools
+```
 
-## Describe your study. Let AI configure it.
-
-> **All AI agents must read [docs/AGENTS.md](docs/AGENTS.md) before working
-> with Workflow or a Workflow-based scientific project.**
-
-> “Sweep these two parameters, run five replicates per combination, convert the
-> recordings to NumPy, and run our plotting script.”
-
-Once your project is properly set up, an AI assistant can translate requests
-like this into documented JSON using your registered models and existing
-analysis components. Routine study changes become configuration edits, reducing
-the Rust and Python an agent must generate, inspect, and debug—and the tokens
-spent doing so.
-
-**More scientific iteration. Less infrastructure code. Less AI context to maintain.**
-
-New scientific models and analysis algorithms still need implementation. The
-[AI-assisted studies guide](docs/guide/12-ai-assisted-studies.md) shows how
-to set up reusable components so later experiments can stay in configuration.
-
-![Scientific Workflow dashboard](docs/assets/UI-3.png)
-
-*Screenshot from 0.15.4. Live progress, compute allocations, messages, and resource usage across a study.
-Some project names and paths are redacted.*
-
-## Bring an existing project
-
-Already have a Rust, Python, or mixed-language scientific project?
-**[Migration instructions are available in `docs/AGENTS.md`](docs/AGENTS.md#13-migrate-an-existing-project-to-workflow).**
-They guide you and your AI assistant through preserving the science, replacing
-custom orchestration with Workflow configuration, connecting existing code and
-analysis, and validating the migrated results against a baseline.
-
-## From a model to an experiment
-
-**Initialization → simulation sweep → NumPy conversion → Python analysis**
-
-- **Explore parameter spaces:** declare Cartesian sweeps, correlated cases, and
-  replicates without manually enumerating tasks.
-- **Connect computation and analysis:** combine registered Rust execution units,
-  executable programs, and Python scripts through phase dependencies.
-- **Record scientific state automatically:** retain typed member recordings for
-  verified reading and NumPy conversion.
-- **Reuse completed prerequisites:** select compatible completed work when
-  rerunning downstream phases.
-- **Follow long experiments:** inspect progress, thread allocations, resource
-  usage, and logs in a live terminal dashboard.
-
-## See it work
-
-- [First population study](docs/guide/3-first-study.md): a complete minimal model
-  with automatic recordings and a verified final result.
-- [Population visualization](docs/guide/9-python-analysis-and-visualization.md):
-  turn parameter sweeps into plotted results.
-- [Dependency pipeline](examples/dependency_pipeline/README.md): initialization,
-  simulation, NumPy conversion, and Python analysis.
-- [Two-dimensional attractor](examples/attractor_2d/README.md): a larger model
-  with swept tasks and visualization.
-
-## Get started
-
-**[Read the numbered guide](docs/guide/1-overview.md)** ·
-**[Install Workflow](docs/guide/2-installation.md)** ·
-**[Documentation index](docs/README.md)**
-
-Already have an integrated project? Start with
-[parameter sweeps](docs/guide/7-parameter-sweeps-and-replicates.md) or
-[AI-assisted studies](docs/guide/12-ai-assisted-studies.md).
-
-**Requirements:** Linux, Rust 1.97+, and an interactive terminal dashboard.
-Python conversion and companion utilities require Python 3.14+ and a companion
-matching stable `>=0.6,<0.7`; the current documentation patch is 0.6.1.
-
-## Explore the project
-
-| Component | Where to go |
-| --- | --- |
-| Rust crate and `study.json` reference | [Crate README](rust/README.md) · [Rustdoc](https://docs.rs/scientific-workflow) |
-| Python readers and conversion | [Python package](python/README.md) |
-| Scientific examples | [Example index](docs/examples.md) |
-| Architecture and API contracts | [Development documentation](docs/README.md#development) |
-| Formats and compatibility | [Protocol compatibility](protocol/compatibility.md) |
-| Releases and migration | [Changelog](CHANGELOG.md) · [Migration guide](docs/migration-0.16.0.md) |
-
-## Project status and license
-
-Scientific Workflow is pre-1.0 software. Review migration notes before upgrading.
+Based on upstream v0.16.1, commit `c6e788eb4a8e2e8c52cd1a4260b7949fe8a95e2d`.
 Licensed under [MIT](rust/LICENSE).
